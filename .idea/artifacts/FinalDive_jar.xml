@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="FinalDive:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/FinalDive_jar</output-path>
+    <root id="archive" name="FinalDive.jar">
+      <element id="module-output" name="FinalDive" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../TheGreatDiving/lib/ai.jar" path-in-jar="/" />
+      <element id="module-source" name="FinalDive" />
+    </root>
+  </artifact>
+</component>
