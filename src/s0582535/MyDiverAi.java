@@ -147,7 +147,6 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         return path;
     }
 
-
     private float align(Point2D goal, boolean obstacleLeft, boolean obstacleRight, float turnFactorLeft, float turnFactorRight) {
         float targetOrientation = (float) -Math.atan2(goal.getY() - diverPos.getY(), goal.getX() - diverPos.getX());
         float angularDifference = targetOrientation - diverAngle;
@@ -285,7 +284,20 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
                         shortestDist = dist;
                     }
                 }
+                // Here is the missing part
+                if (closestPearl != null) {
+                    for (Point2D at = closestPearl; at != null; at = shortestPath.get(at)) {
+                        pathToSwim.push(at);
+                    }
+                }
             }
+        }
+
+        // Check if the diver has reached the current target pearl
+        if (!pathToSwim.isEmpty() && pathToSwim.peek().distance(diverPos) < stepSize) {
+            Point2D reachedPearl = pathToSwim.pop();
+            collectedPearls.add(reachedPearl);
+            pearlsList.remove(reachedPearl);
         }
 
 
