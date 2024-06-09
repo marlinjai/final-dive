@@ -127,7 +127,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
     private Graph graph;
     private float stepSize = 40;
 
-    private static final double MIN_DISTANCE_TO_OBSTACLE = 50.0;
+    private static final double MIN_DISTANCE_TO_OBSTACLE = 25.0;
 
     public MyDiverAi(Info info) {
         super(info);
@@ -170,7 +170,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         graph.addNode(initDiverPos);
 
         for (float x = 0; x < sceneWidth; x += stepSize) {
-            for (float y = 40 + stepSize; y < sceneHeight; y += stepSize) {
+            for (float y = stepSize; y < sceneHeight; y += stepSize) {
                 Point2D gridPoint = new Point2D.Float(x, y);
                 boolean insideObstacle = false;
                 boolean tooCloseToObstacle = false;
