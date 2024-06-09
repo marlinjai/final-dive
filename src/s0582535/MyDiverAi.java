@@ -328,7 +328,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         double requiredAir = midPathDistance * airConsumptionRate;
 
 
-        return (requiredAir <= air*0.9 || totalRequiredAir <= air*0.9); // air should be the current air level of the diver
+        return (requiredAir <= air*0.95 || totalRequiredAir <= air*0.95); // air should be the current air level of the diver
     }
 
 
