@@ -111,7 +111,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
     private float diverAngle;
     private static final float MAX_ACCELERATION = 1.0f;
 
-    double rayLength = 36.0; // Length of the rays
+    double rayLength = 27.0; // Length of the rays
     double angleLeft;
     double angleRight;
 
@@ -120,7 +120,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
     Point2D.Float[] pointsLeft;
     Point2D.Float[] pointsRight;
 
-    Point2D lastPearl;
+    Point2D lastVisitedNode;
 
     private float air;
 
@@ -140,7 +140,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         graph = new Graph();
         pointsLeft = new Point2D.Float[numPoints];
         pointsRight = new Point2D.Float[numPoints];
-        lastPearl = null;
+        lastVisitedNode = null;
         air = info.getAir();
         airLine = new ArrayList<>();
         createGraph();
@@ -323,12 +323,14 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         }
 
         // Assuming air consumption rate is 1 and checking if the diver can reach the end with available air
-        double airConsumptionRate = 0.91;
+        double airConsumptionRate = 0.9085;
         double totalRequiredAir = totalPathDistance * airConsumptionRate;
         double requiredAir = midPathDistance * airConsumptionRate;
 
+        boolean res = (requiredAir <= air*0.95 || totalRequiredAir <= air*0.95);
 
-        return (requiredAir <= air*0.95 || totalRequiredAir <= air*0.95); // air should be the current air level of the diver
+        System.out.println("result of is In reach: "+res);
+        return res; // air should be the current air level of the diver
     }
 
 
@@ -513,25 +515,25 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         //System.out.println(pearlsToCollect.size() );
         if (pathToSwim.isEmpty() && !pearlsToCollect.isEmpty()) {
 
-            if (lastPearl == null) recomputePath(graph, initDiverPos, findClosestPearl());
+            if (lastVisitedNode == null) recomputePath(graph, initDiverPos, findClosestPearl());
             else {
 
                 Point2D closestPearl = findClosestPearl();
-                if (isInReach(lastPearl, closestPearl)) {
-                    recomputePath(graph, lastPearl, closestPearl);
+                if (isInReach(lastVisitedNode, closestPearl)) {
+                    recomputePath(graph, lastVisitedNode, closestPearl);
                 } else {
-                    Point2D closestAirPoint = findClosestAirPoint(lastPearl);
+                    Point2D closestAirPoint = findClosestAirPoint(lastVisitedNode);
 
-                    if (lastPearl.equals(closestAirPoint)) {
-                        if (closestPearl.getX() - lastPearl.getX() < 0) {
-                            Point2D airPoint = new Point2D.Float((float) (closestAirPoint.getX() - 2*stepSize), (float) closestAirPoint.getY());
-                            recomputePath(graph, lastPearl, airPoint);
-                        } else if (closestPearl.getX() - lastPearl.getX() > 0) {
-                            Point2D airPoint = new Point2D.Float((float) (closestAirPoint.getX() + 2*stepSize), (float) closestAirPoint.getY());
-                            recomputePath(graph, lastPearl, airPoint);
+                    if (lastVisitedNode.equals(closestAirPoint)) {
+                        if (closestPearl.getX() - lastVisitedNode.getX() < 0) {
+                            Point2D airPoint = new Point2D.Float((float) (closestAirPoint.getX() - 3*stepSize), (float) closestAirPoint.getY());
+                            recomputePath(graph, lastVisitedNode, airPoint);
+                        } else if (closestPearl.getX() - lastVisitedNode.getX() > 0) {
+                            Point2D airPoint = new Point2D.Float((float) (closestAirPoint.getX() + 3*stepSize), (float) closestAirPoint.getY());
+                            recomputePath(graph, lastVisitedNode, airPoint);
                         }
-                    } else if (closestAirPoint != lastPearl) {
-                        recomputePath(graph, lastPearl, closestAirPoint);
+                    } else if (closestAirPoint != lastVisitedNode) {
+                        recomputePath(graph, lastVisitedNode, closestAirPoint);
                     }
                 }
             }
@@ -539,19 +541,26 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
 
 
             if (!pathToSwim.isEmpty()) {
-                if (insideCircle(diverPos, pathToSwim.peek(), 10)) {
-                    Point2D reachedPoint = pathToSwim.pop();
-                    lastPearl = reachedPoint;
 
+                    Point2D reachedPoint = pathToSwim.peek();
+
+
+                if (insideCircle(diverPos, reachedPoint, 11.5)) {
                     if (pearlsToCollect.contains(reachedPoint)) {
                         pearlsToCollect.remove(reachedPoint);
                         System.out.println("Pearl collected");
                     }
+                    if (insideCircle(diverPos, reachedPoint, 15) ) {
+                    pathToSwim.pop();
+                    }
+                    lastVisitedNode = reachedPoint;
+
 
                 }
             }
 
             Point2D.Float targetPearl = pathToSwim.isEmpty() ? null : (Point2D.Float) pathToSwim.peek();
+        System.out.println("Target pearl: " + targetPearl);
             float alignAcc = targetPearl == null ? 0 : align(targetPearl, obstacleLeft, obstacleRight, turnFactorLeft, turnFactorRight);
 
 
