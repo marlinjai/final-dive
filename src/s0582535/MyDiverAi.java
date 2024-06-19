@@ -10,10 +10,10 @@ import java.util.*;
 import java.util.List;
 
 class Node {
-    Point2D point;
+    Point2D.Float point;
     List<Edge> edges;
 
-    public Node(Point2D point) {
+    public Node(Point2D.Float point) {
         this.point = point;
         this.edges = new ArrayList<>();
     }
@@ -30,17 +30,17 @@ class Edge {
 }
 
 class Graph {
-    Map<Point2D, Node> nodes;
+    Map<Point2D.Float, Node> nodes;
 
     public Graph() {
         this.nodes = new HashMap<>();
     }
 
-    public void addNode(Point2D point) {
+    public void addNode(Point2D.Float point) {
         nodes.put(point, new Node(point));
     }
 
-    public void addEdge(Point2D from, Point2D to, double weight) {
+    public void addEdge(Point2D.Float from, Point2D.Float to, double weight) {
         Node fromNode = nodes.get(from);
         Node toNode = nodes.get(to);
         if (fromNode != null && toNode != null) {
@@ -48,18 +48,18 @@ class Graph {
         }
     }
 
-    public Node getNode(Point2D point) {
+    public Node getNode(Point2D.Float point) {
         return nodes.get(point);
     }
 }
 class Dijkstra {
-    public static List<Point2D> findShortestPath(Graph graph, Point2D start, Point2D goal) {
-        Map<Point2D, Double> distances = new HashMap<>();
-        Map<Point2D, Point2D> previous = new HashMap<>();
+    public static List<Point2D.Float> findShortestPath(Graph graph, Point2D.Float start, Point2D.Float goal) {
+        Map<Point2D.Float, Double> distances = new HashMap<>();
+        Map<Point2D.Float, Point2D.Float> previous = new HashMap<>();
         PriorityQueue<Node> queue = new PriorityQueue<>(Comparator.comparingDouble(node -> distances.getOrDefault(node.point, Double.MAX_VALUE)));
 
 
-        for (Point2D point : graph.nodes.keySet()) {
+        for (Point2D.Float point : graph.nodes.keySet()) {
             distances.put(point, Double.MAX_VALUE);
             previous.put(point, null);
         }
@@ -69,45 +69,47 @@ class Dijkstra {
             queue.add(startNode);
         }
 
-                while (!queue.isEmpty()) {
-                    Node current = queue.poll();
-                   // System.out.println("Current node: " + current.point); // Debug print
-                    if (current.point.equals(goal)) break;
+        while (!queue.isEmpty()) {
+            Node current = queue.poll();
+            // System.out.println("Current node: " + current.point); // Debug print
+            if (current.point.equals(goal)) break;
 
-                    for (Edge edge : current.edges) {
-                        Node neighbor = edge.target;
-                        double newDist = distances.get(current.point) + edge.weight;
-                        if (newDist < distances.get(neighbor.point) && neighbor != null) {
-                            distances.put(neighbor.point, newDist);
-                            previous.put(neighbor.point, current.point);
-                            queue.add(neighbor);
-                        }
-                    }
+            for (Edge edge : current.edges) {
+                Node neighbor = edge.target;
+                double newDist = distances.get(current.point) + edge.weight;
+                if (newDist < distances.get(neighbor.point) && neighbor != null) {
+                    distances.put(neighbor.point, newDist);
+                    previous.put(neighbor.point, current.point);
+                    queue.add(neighbor);
                 }
-
-                if (previous.get(goal) == null) {
-                    System.out.println("Goal is not reachable from the start"); // Debug print
-                    return Collections.emptyList(); // Goal is not reachable from the start
-                }
-
-                List<Point2D> path = new ArrayList<>();
-                for (Point2D at = goal; at != null; at = previous.get(at)) {
-                    path.add(at);
-                }
-                Collections.reverse(path);
-   //             System.out.println("Shortest path: " + path); // Debug print
-                return path;
             }
         }
+
+        if (previous.get(goal) == null) {
+            System.out.println("Goal is not reachable from the start"); // Debug print
+            return Collections.emptyList(); // Goal is not reachable from the start
+        }
+
+        List<Point2D.Float> path = new ArrayList<>();
+        for (Point2D.Float at = goal; at != null; at = previous.get(at)) {
+            path.add(at);
+        }
+        Collections.reverse(path);
+        //             System.out.println("Shortest path: " + path); // Debug print
+        return path;
+    }
+}
 
 public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
     private Point2D.Float diverPos;
 
     private Point2D.Float initDiverPos;
-    private Stack<Point2D> pathToSwim;
-    private List<Point2D> pearlsToCollect;
+    private Stack<Point2D.Float> pathToSwim;
+    private List<Point2D.Float> pearlsToCollect;
 
-    private List<Point2D> airLine;
+    private Map<Point2D.Float, Point2D.Float> pearlMap = new HashMap<>();
+
+    private List<Point2D.Float> airLine;
     private float diverAngle;
     private static final float MAX_ACCELERATION = 1.0f;
 
@@ -120,12 +122,16 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
     Point2D.Float[] pointsLeft;
     Point2D.Float[] pointsRight;
 
-    Point2D lastVisitedNode;
+    Point2D.Float lastVisitedNode;
 
     private float air;
 
+    private int updateCounter = 0;
+
     private Graph graph;
     private float stepSize = 40;
+
+    public float zz;
 
     private static final double MIN_DISTANCE_TO_OBSTACLE = 25.0;
 
@@ -143,24 +149,41 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         lastVisitedNode = null;
         air = info.getAir();
         airLine = new ArrayList<>();
-        createGraph();
         initializePearls();
+        createGraph();
     }
 
     private void createGraph() {
         // Add pearls as nodes
         Point[] pearls = info.getScene().getPearl();
+        Path2D[] obs = info.getScene().getObstacles();
         for (Point pearl : pearls) {
-            Point2D pearlPoint = new Point2D.Float(pearl.x, pearl.y);
-            graph.addNode(pearlPoint);
+            Point2D.Float pearlPoint = new Point2D.Float(pearl.x, pearl.y);
+
+            for (Path2D obstacle : obs) {
+                if (!obstacle.contains(pearlPoint)) {
+
+                    graph.addNode(pearlPoint);
+                }
+                else{
+                    Point2D.Float closestPoint =  findClosestPointOutsideObstacle(pearlPoint, obs);
+                    graph.addNode(closestPoint);
+                    pearlsToCollect.remove(pearlPoint);
+                    System.out.println("Pearl at " + pearlPoint + " is inside an obstacle");
+                    pearlsToCollect.add(closestPoint);
+                    pearlMap.put(pearlPoint, closestPoint);
+                }
+            }
         }
 
+
         // Add air refill points as nodes
-        for (float x = 0; x < info.getScene().getWidth(); x += stepSize) {
-            Point2D airPoint = new Point2D.Float(x, 0);
+        for (zz = 0; zz < info.getScene().getWidth(); zz += stepSize) {
+            Point2D.Float airPoint = new Point2D.Float(zz, 0);
             graph.addNode(airPoint);
             airLine.add(airPoint);
         }
+        System.out.println("Lats x: "+ zz );
 
         // Add grid points below the airline (y > 40)
         float sceneWidth = info.getScene().getWidth();
@@ -171,7 +194,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
 
         for (float x = 0; x < sceneWidth; x += stepSize) {
             for (float y = stepSize; y < sceneHeight; y += stepSize) {
-                Point2D gridPoint = new Point2D.Float(x, y);
+                Point2D.Float gridPoint = new Point2D.Float(x, y);
                 boolean insideObstacle = false;
                 boolean tooCloseToObstacle = false;
 
@@ -197,16 +220,45 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         addEdges();
     }
 
-    private double getDistanceToObstacle(Point2D point, Path2D obstacle) {
-        double[] coords = new double[6];
+    private Point2D.Float findClosestPointOutsideObstacle(Point2D.Float pearlPoint, Path2D[] obstacles) {
+        double radius = 1.0; // Start with a small radius
+        double radiusIncrement = 1.0; // The amount by which to increase the radius each time
+
+        while (true) { // Keep looping until we find a point outside the obstacle
+            // Check points on the circle with the current radius
+            for (double angle = 0.0; angle < 2 * Math.PI; angle += 0.1) { // Adjust the angle increment as needed
+                float x = (float) (pearlPoint.getX() + radius * Math.cos(angle));
+                float y = (float) (pearlPoint.getY() + radius * Math.sin(angle));
+                Point2D.Float pointOnCircle = new Point2D.Float(x, y);
+
+                boolean insideObstacle = false;
+                for (Path2D obstacle : obstacles) {
+                    if (obstacle.contains(pointOnCircle)) {
+                        insideObstacle = true;
+                        break;
+                    }
+                }
+
+                if (!insideObstacle) {
+                    return pointOnCircle; // We found a point outside the obstacle
+                }
+            }
+
+            // Increase the radius for the next iteration
+            radius += radiusIncrement;
+        }
+    }
+
+    private double getDistanceToObstacle(Point2D.Float point, Path2D obstacle) {
+        float[] coords = new float[6];
         double minDistance = Double.MAX_VALUE;
 
         for (PathIterator pi = obstacle.getPathIterator(null); !pi.isDone(); pi.next()) {
             int type = pi.currentSegment(coords);
-            Point2D obstaclePoint;
+            Point2D.Float obstaclePoint;
 
             if (type == PathIterator.SEG_MOVETO || type == PathIterator.SEG_LINETO) {
-                obstaclePoint = new Point2D.Double(coords[0], coords[1]);
+                obstaclePoint = new Point2D.Float( coords[0], coords[1]);
                 double distance = point.distance(obstaclePoint);
                 if (distance < minDistance) {
                     minDistance = distance;
@@ -217,7 +269,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         return minDistance;
     }
 
-    private boolean isObstructed(Point2D from, Point2D to) {
+    private boolean isObstructed(Point2D.Float from, Point2D.Float to) {
         Path2D[] obstacles = info.getScene().getObstacles();
         Line2D line = new Line2D.Double(from, to);
 
@@ -277,20 +329,20 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         pearlsToCollect.sort(Comparator.comparingDouble(Point2D::getX));
     }
 
-    private void recomputePath(Graph graph, Point2D start, Point2D target) {
+    private void recomputePath(Graph graph, Point2D.Float start, Point2D.Float target) {
         pathToSwim.clear();
         if (!pearlsToCollect.isEmpty()) {
-            List<Point2D> path = Dijkstra.findShortestPath(graph, start, target);
+            List<Point2D.Float> path = Dijkstra.findShortestPath(graph, start, target);
             System.out.println("DIk res: " + path);
             Collections.reverse(path);
             pathToSwim.addAll(path);
         }
     }
 
-    private boolean isInReach(Point2D start, Point2D target) {
+    private boolean isInReach(Point2D.Float start, Point2D.Float target) {
 
-        List<Point2D> pathToTarget = Dijkstra.findShortestPath(graph, start, target);
-        List<Point2D> totalPath = new ArrayList<>();
+        List<Point2D.Float> pathToTarget = Dijkstra.findShortestPath(graph, start, target);
+        List<Point2D.Float> totalPath = new ArrayList<>();
         for (int i = 0; i < pearlsToCollect.size(); i++) {
             if(i == 0 ) {
                 totalPath.addAll(Dijkstra.findShortestPath(graph, start, pearlsToCollect.get(i)));
@@ -301,48 +353,48 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         }
 
 
-        Point2D closestAirPoint = findClosestAirPoint(target);
-        List<Point2D> pathToAir = (closestAirPoint != null) ? Dijkstra.findShortestPath(graph, target, closestAirPoint) : Collections.emptyList();
+        Point2D.Float closestAirPoint = findClosestAirPoint(target);
+        List<Point2D.Float> pathToAir = (closestAirPoint != null) ? Dijkstra.findShortestPath(graph, target, closestAirPoint) : Collections.emptyList();
 
         // Calculate the total path by combining path to target and path to air
-        List<Point2D> fullPath = new ArrayList<>(pathToTarget);
+        List<Point2D.Float> fullPath = new ArrayList<>(pathToTarget);
         fullPath.addAll(pathToAir);
 
         // Calculate the total distance of the path
         double totalPathDistance = 0;
         double midPathDistance = 0;
-        Point2D previousPoint = start;
-        for (Point2D point : totalPath) {
+        Point2D.Float previousPoint = start;
+        for (Point2D.Float point : totalPath) {
             totalPathDistance += previousPoint.distance(point);
             previousPoint = point;
         }
         previousPoint = start;
-        for (Point2D point : fullPath) {
+        for (Point2D.Float point : fullPath) {
             midPathDistance += previousPoint.distance(point);
             previousPoint = point;
         }
 
         // Assuming air consumption rate is 1 and checking if the diver can reach the end with available air
-        double airConsumptionRate = 0.9085;
+        double airConsumptionRate = 0.934;
         double totalRequiredAir = totalPathDistance * airConsumptionRate;
         double requiredAir = midPathDistance * airConsumptionRate;
 
-        boolean res = (requiredAir <= air*0.95 || totalRequiredAir <= air*0.95);
+        boolean res = (requiredAir <= air || totalRequiredAir <= air);
 
         System.out.println("result of is In reach: "+res);
         return res; // air should be the current air level of the diver
     }
 
 
-    private Point2D findClosestAirPoint(Point2D target) {
+    private Point2D.Float findClosestAirPoint(Point2D.Float target) {
         if (airLine.isEmpty()) {
             return null;  // Handle case where no air points are available
         }
 
-        Point2D closestPoint = null;
+        Point2D.Float closestPoint = null;
         double minDistance = Double.MAX_VALUE;  // Start with the maximum possible value
 
-        for (Point2D p : airLine) {
+        for (Point2D.Float p : airLine) {
             double currentDistance = p.distance(target);  // Calculate distance to the target point
             if (currentDistance < minDistance) {
                 minDistance = currentDistance;  // Update minimum distance
@@ -353,12 +405,12 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         return closestPoint;  // Return the closest air point found
     }
 
-    private Point2D findClosestPearl() {
+    private Point2D.Float findClosestPearl() {
 
-        Point2D closestPearl = null;
+        Point2D.Float closestPearl = null;
         double minDistance = Double.MAX_VALUE;  // Start with the maximum possible value
 
-        for (Point2D pearl : pearlsToCollect) {
+        for (Point2D.Float pearl : pearlsToCollect) {
             double dist = pearl.distance(diverPos);
             if (dist < minDistance) {
                 minDistance = dist;
@@ -384,30 +436,30 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         return Color.green;
     }
 
-    public Boolean insideCircle(Point2D point, Point2D center, double radius) {
+    public Boolean insideCircle(Point2D.Float point, Point2D.Float center, double radius) {
         return point.distanceSq(center) <= radius * radius;
     }
 
-    private float align(Point2D goal, boolean obstacleLeft, boolean obstacleRight, float turnFactorLeft, float turnFactorRight) {
+    private float align(Point2D.Float goal, boolean obstacleLeft, boolean obstacleRight, float turnFactorLeft, float turnFactorRight) {
         float targetOrientation = (float) -Math.atan2(goal.getY() - diverPos.getY(), goal.getX() - diverPos.getX());
-        float angularDifference = targetOrientation - diverAngle;
+        float angularDifference;
 
         // If there's an obstacle on the left, adjust the target orientation to the right
         if (obstacleLeft) {
-            targetOrientation += Math.toRadians(45) * turnFactorLeft;
+            targetOrientation = normalizeAngle(targetOrientation + (float) Math.toRadians(45) * turnFactorLeft);
         }
 
         // If there's an obstacle on the right, adjust the target orientation to the left
         if (obstacleRight) {
-            targetOrientation -= Math.toRadians(45) * turnFactorRight;
+            targetOrientation = normalizeAngle(targetOrientation - (float) Math.toRadians(45) * turnFactorRight);
         }
 
-        angularDifference = targetOrientation - diverAngle;
+        angularDifference = normalizeAngle(targetOrientation - diverAngle);
 
         if (Math.abs(angularDifference) > 0.001f) {
             float result;
-            if (Math.abs(angularDifference) < 0.2f) {
-                result = angularDifference * info.getMaxAbsoluteAngularVelocity() / 0.2f;
+            if (Math.abs(angularDifference) < 0.3f) {
+                result = angularDifference * info.getMaxAbsoluteAngularVelocity() / 0.3f;
             } else {
                 result = Math.signum(angularDifference) * info.getMaxAbsoluteAngularVelocity();
             }
@@ -417,10 +469,16 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         return 0;
     }
 
+    private float normalizeAngle(float angle) {
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        return angle;
+    }
+
     @Override
     public void drawDebugStuff(Graphics2D gfx) {
         if (!pathToSwim.isEmpty()) {
-            Point2D top = pathToSwim.peek();
+            Point2D.Float top = pathToSwim.peek();
             gfx.setColor(Color.YELLOW);
             gfx.drawOval((int) top.getX() - 5, (int) top.getY() - 5, 10, 10);
         }
@@ -431,20 +489,20 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
 
 
         gfx.setColor(Color.BLUE);
-        for (Point2D s : pathToSwim) {
+        for (Point2D.Float s : pathToSwim) {
             gfx.drawLine((int) diverPos.getX(), (int) diverPos.getY(), (int) s.getX(), (int) s.getY());
         }
 
 
 // Draw the pearls
         gfx.setColor(Color.RED);
-        for (Point2D pearl : pearlsToCollect) {
+        for (Point2D.Float pearl : pearlsToCollect) {
             gfx.fillOval((int) pearl.getX() - 3, (int) pearl.getY() - 3, 6, 6);
         }
 
         // Draw the air refill points
         gfx.setColor(Color.CYAN);
-        for (Point2D airPoint : airLine) {
+        for (Point2D.Float airPoint : airLine) {
             gfx.fillOval((int) airPoint.getX() - 3, (int) airPoint.getY() - 3, 6, 6);
         }
 
@@ -470,6 +528,8 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
 
     @Override
     public PlayerAction update() {
+
+        updateCounter++;
         diverPos.setLocation(info.getX(), info.getY());
         diverAngle = info.getOrientation();
         air = info.getAir();
@@ -508,8 +568,8 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         }
 
         // Calculate turn factors based on distance to obstacles
-        float turnFactorLeft = obstacleLeft ? (float) (15.0 / minDistanceLeft) : 1.0f;
-        float turnFactorRight = obstacleRight ? (float) (15.0 / minDistanceRight) : 1.0f;
+        float turnFactorLeft = obstacleLeft ? (float) (5 / minDistanceLeft) : 1.0f;
+        float turnFactorRight = obstacleRight ? (float) (5 / minDistanceRight) : 1.0f;
 
         // Populate the pathToSwim stack if it's empty
         //System.out.println(pearlsToCollect.size() );
@@ -518,18 +578,19 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
             if (lastVisitedNode == null) recomputePath(graph, initDiverPos, findClosestPearl());
             else {
 
-                Point2D closestPearl = findClosestPearl();
+                Point2D.Float closestPearl = findClosestPearl();
                 if (isInReach(lastVisitedNode, closestPearl)) {
                     recomputePath(graph, lastVisitedNode, closestPearl);
                 } else {
-                    Point2D closestAirPoint = findClosestAirPoint(lastVisitedNode);
+                    Point2D.Float closestAirPoint = findClosestAirPoint(lastVisitedNode);
 
                     if (lastVisitedNode.equals(closestAirPoint)) {
-                        if (closestPearl.getX() - lastVisitedNode.getX() < 0) {
-                            Point2D airPoint = new Point2D.Float((float) (closestAirPoint.getX() - 3*stepSize), (float) closestAirPoint.getY());
+                        if (closestPearl.getX() - lastVisitedNode.getX() > 0) {
+                            Point2D.Float airPoint = new Point2D.Float((float) (Math.min(closestAirPoint.getX() + 3*stepSize, zz-stepSize )), (float) closestAirPoint.getY());
                             recomputePath(graph, lastVisitedNode, airPoint);
-                        } else if (closestPearl.getX() - lastVisitedNode.getX() > 0) {
-                            Point2D airPoint = new Point2D.Float((float) (closestAirPoint.getX() + 3*stepSize), (float) closestAirPoint.getY());
+                        }
+                        else  if (closestPearl.getX() - lastVisitedNode.getX() < 0) {
+                            Point2D.Float airPoint = new Point2D.Float((float) Math.max(stepSize,(closestAirPoint.getX() - 3*stepSize)), (float) closestAirPoint.getY());
                             recomputePath(graph, lastVisitedNode, airPoint);
                         }
                     } else if (closestAirPoint != lastVisitedNode) {
@@ -540,46 +601,59 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         }
 
 
-            if (!pathToSwim.isEmpty()) {
+        if (!pathToSwim.isEmpty()) {
+            Point2D.Float nextPointToReach = pathToSwim.peek();
 
-                    Point2D reachedPoint = pathToSwim.peek();
 
-
-                if (insideCircle(diverPos, reachedPoint, 11.5)) {
-                    if (pearlsToCollect.contains(reachedPoint)) {
-                        pearlsToCollect.remove(reachedPoint);
+            if (insideCircle(diverPos, nextPointToReach, 8)) {
+                Point2D.Float originalPearl = pearlMap.get(nextPointToReach);
+                if (originalPearl != null && pearlsToCollect.contains(originalPearl)) {
+                    if (insideCircle(diverPos, originalPearl, 6)) {
+                        pearlsToCollect.remove(originalPearl);
                         System.out.println("Pearl collected");
                     }
-                    if (insideCircle(diverPos, reachedPoint, 15) ) {
-                    pathToSwim.pop();
+                } else if (pearlsToCollect.contains(nextPointToReach)) {
+                    pearlsToCollect.remove(nextPointToReach);
+                    System.out.println("Pearl collected");
+                } else if (airLine.contains(nextPointToReach)) {
+                    if (insideCircle(diverPos, nextPointToReach, 1)) {
+                        System.out.println("Air refilled");
+                        pathToSwim.pop();
                     }
-                    lastVisitedNode = reachedPoint;
-
-
+                } else if (insideCircle(diverPos, nextPointToReach, 10)) {
+                    pathToSwim.pop();
                 }
+                lastVisitedNode = nextPointToReach;
             }
-
-            Point2D.Float targetPearl = pathToSwim.isEmpty() ? null : (Point2D.Float) pathToSwim.peek();
-        System.out.println("Target pearl: " + targetPearl);
-            float alignAcc = targetPearl == null ? 0 : align(targetPearl, obstacleLeft, obstacleRight, turnFactorLeft, turnFactorRight);
-
-
-            // Now you can use obstacleLeft and obstacleRight to determine if there's an obstacle in the direction of the rays
-
-            for (int i = 0; i < obstacles.length; i++) {
-                PathIterator pi = obstacles[i].getPathIterator(null);
-                while (!pi.isDone()) {
-                    float[] array = new float[6];
-                    pi.currentSegment(array);
-                    float x = array[0];
-                    float y = array[1];
-                    pi.next();
-                }
-            }
-
-
-            return new DivingAction(info.getMaxAcceleration(), alignAcc);
         }
 
+        Point2D.Float targetPearl = pathToSwim.isEmpty() ? null : (Point2D.Float) pathToSwim.peek();
+
+        float alignAcc = targetPearl == null ? 0 : align(targetPearl, obstacleLeft, obstacleRight, turnFactorLeft, turnFactorRight);
+
+
+        if (updateCounter % 100 == 0) {
+
+            System.out.println("Target pearl: " + targetPearl);
+            System.out.println("Align acc  : " + alignAcc);
+
+        }
+
+        // Now you can use obstacleLeft and obstacleRight to determine if there's an obstacle in the direction of the rays
+
+        for (int i = 0; i < obstacles.length; i++) {
+            PathIterator pi = obstacles[i].getPathIterator(null);
+            while (!pi.isDone()) {
+                float[] array = new float[6];
+                pi.currentSegment(array);
+                float x = array[0];
+                float y = array[1];
+                pi.next();
+            }
+        }
+
+
+         return new DivingAction(info.getMaxAcceleration(), alignAcc);
     }
 
+}
