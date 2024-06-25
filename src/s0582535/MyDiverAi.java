@@ -102,7 +102,6 @@ class Dijkstra {
 
 public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
     private Point2D.Float diverPos;
-
     private Point2D.Float initDiverPos;
     private Stack<Point2D.Float> pathToSwim;
     private List<Point2D.Float> pearlsToCollect;
@@ -151,6 +150,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         airLine = new ArrayList<>();
         initializePearls();
         createGraph();
+        info.getScene().getRecyclingProducts();
     }
 
     private void createGraph() {
