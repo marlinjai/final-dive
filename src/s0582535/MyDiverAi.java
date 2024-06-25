@@ -388,7 +388,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         return point.distanceSq(center) <= radius * radius;
     }
 
-    private float align(Point2D goal, boolean obstacleLeft, boolean obstacleRight, float turnFactorLeft, float turnFactorRight) {
+    private float lalazy(Point2D goal, boolean obstacleLeft, boolean obstacleRight, float turnFactorLeft, float turnFactorRight) {
         float targetOrientation = (float) -Math.atan2(goal.getY() - diverPos.getY(), goal.getX() - diverPos.getX());
         float angularDifference = targetOrientation - diverAngle;
 
@@ -433,6 +433,20 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         gfx.setColor(Color.BLUE);
         for (Point2D s : pathToSwim) {
             gfx.drawLine((int) diverPos.getX(), (int) diverPos.getY(), (int) s.getX(), (int) s.getY());
+        }
+
+        gfx.setColor(Color.GREEN); // Set the color to red
+        Path2D[] obstacles = info.getScene().getObstacles();
+        for (Path2D obstacle : obstacles) {
+            PathIterator pi = obstacle.getPathIterator(null);
+            while (!pi.isDone()) {
+                float[] array = new float[6];
+                pi.currentSegment(array);
+                float x = array[0];
+                float y = array[1];
+                gfx.fillOval((int) x - 3, (int) y - 3, 6, 6); // Draw a small circle at each point
+                pi.next();
+            }
         }
 
 
