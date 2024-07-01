@@ -135,6 +135,9 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
 
 
     public float zz;
+    int i = 0;
+
+    int j = 0;
 
 
 
@@ -402,7 +405,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         double totalRequiredAir = totalPathDistance * airConsumptionRate;
         double requiredAir = midPathDistance * airConsumptionRate;
 
-        boolean res = (requiredAir <= air*0.8 || totalRequiredAir <= air*0.8);
+        boolean res = (requiredAir <= air*0.78 || totalRequiredAir <= air*0.78);
 
 
 
@@ -647,13 +650,18 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
                     Point2D.Float closestAirPoint = findClosestAirPoint(lastVisitedNode);
 
                     if (lastVisitedNode.equals(closestAirPoint)) {
-                        if (closestPearl.getX() - lastVisitedNode.getX() > 0) {
-                            Point2D.Float airPoint = new Point2D.Float((float) (Math.min(closestAirPoint.getX() + 3 * stepSize, zz - stepSize)), (float) closestAirPoint.getY());
+                        if (closestPoint.getX() - lastVisitedNode.getX() > 0) {
+                            Point2D.Float airPoint = new Point2D.Float((float) (Math.min(closestAirPoint.getX() + i * stepSize, zz - stepSize)), (float) closestAirPoint.getY());
                             recomputePath(graph, lastVisitedNode, airPoint);
-                        } else if (closestPearl.getX() - lastVisitedNode.getX() < 0) {
-                            Point2D.Float airPoint = new Point2D.Float((float) Math.max(stepSize, (closestAirPoint.getX() - 3 * stepSize)), (float) closestAirPoint.getY());
+                            i++;
+
+                        } else if (closestPoint.getX() - lastVisitedNode.getX() < 0) {
+                            Point2D.Float airPoint = new Point2D.Float((float) Math.max(stepSize, (closestAirPoint.getX() - j * stepSize)), (float) closestAirPoint.getY());
                             recomputePath(graph, lastVisitedNode, airPoint);
+                            j++;
                         }
+
+
                     } else if (closestAirPoint != lastVisitedNode) {
                         recomputePath(graph, lastVisitedNode, closestAirPoint);
                     }
@@ -695,20 +703,20 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
                 } else if (recyclingProductsToCollect.contains(nextPointToReach)) {
                     recyclingProductsToCollect.remove(nextPointToReach);
                     System.out.println("Trash collected");
-                } else if (nextPointToReach.equals(shop)) {
-                    while (insideCircle(diverPos, shop, 2) && info.getMoney() == 4) {
-
+                } else if (nextPointToReach.equals(shop)) { //
+                     float r = 1;
+                    while (insideCircle(diverPos, shop, r) && info.getMoney() == 4) {
                         return new ShoppingAction(ShoppingItem.BALLOON_SET);
                     }
 
-                    while (insideCircle(diverPos, shop, 2) && info.getMoney() == 2) {
+                    while (insideCircle(diverPos, shop, 1.95) && info.getMoney() == 2) {
 
                         hasPerks = true;
                         return new ShoppingAction(ShoppingItem.STREAMLINED_WIG);
 
                     }
 
-                    if (info.getMoney() == 0 && hasPerks) {
+                    if (info.getMoney() == 0 && hasPerks && insideCircle(diverPos, shop, 1.95)) {
                         pathToSwim.remove(shop);
                     }
 
