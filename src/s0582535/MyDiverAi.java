@@ -139,6 +139,10 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
 
     int j = 0;
 
+    Rectangle[] rightStreams;
+    Rectangle[] leftStreams;
+
+
 
 
     /*info.getMoney();*/
@@ -164,6 +168,9 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         initializePearls();
         shop = new Point2D.Float(info.getScene().getShopPosition(), 0);
         createGraph();
+
+        rightStreams = info.getScene().getStreamsToTheRight();
+        leftStreams = info.getScene().getStreamsToTheLeft();
     }
 
 
@@ -453,9 +460,25 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
         Point2D.Float closestRecycling = null;
         double minDistance = Double.MAX_VALUE;  // Start with the maximum possible value
 
+
         for (Point2D.Float trash : recyclingProductsToCollect) {
+            boolean free = true;
+
+        for (Rectangle stream : leftStreams){
+            if (stream.contains(trash)){
+                free = false;
+                break;
+            }
+        }
+        for (Rectangle stream : rightStreams){
+            if (stream.contains(trash)){
+                free = false;
+                break;
+            }
+        }
+
             double dist = trash.distance(diverPos);
-            if (dist < minDistance) {
+            if (dist < minDistance &&  free) {
                 minDistance = dist;
                 closestRecycling = trash;
             }
@@ -642,7 +665,7 @@ public class MyDiverAi extends lenz.htw.ai4g.ai.AI {
                 if (info.getMoney() < 4 && isInReach(lastVisitedNode, closestPoint) && !hasPerks) {
                     recomputePath(graph, lastVisitedNode, closestPoint);
                 }
-                else if (info.getMoney() == 4 && isInReach(lastVisitedNode, shop) && !hasPerks){
+                else if (info.getMoney() >= 4 && isInReach(lastVisitedNode, shop) && !hasPerks){
                     recomputePath(graph, lastVisitedNode, shop);
                 }
                 else {
